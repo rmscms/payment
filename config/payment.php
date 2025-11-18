@@ -43,6 +43,9 @@ return [
     'callback_url' => env('PAYMENT_CALLBACK_URL', '/payment/callback'),
     'return_url' => env('PAYMENT_RETURN_URL', '/payment/return'),
     'certificates_path' => env('PAYMENT_CERT_PATH', storage_path('payment/certs')),
+    'frontend' => [
+        'default_logo' => env('PAYMENT_DEFAULT_LOGO', '/images/payment/gateway-default.svg'),
+    ],
 
     /*
     |--------------------------------------------------------------------------

@@ -61,10 +61,14 @@ class PaymentTransactionsController extends AdminController implements HasList, 
             Field::make('currency')
                 ->withTitle(trans('payment::admin.transactions.fields.currency'))
                 ->width('100px'),
-            Field::select('status')
+            Field::make('status')
                 ->withTitle(trans('payment::admin.transactions.fields.status'))
-                ->setOptions($this->statusOptions())
-                ->width('140px'),
+                ->customMethod('renderStatusBadge')
+                ->width('160px'),
+            Field::make('status_detail')
+                ->withTitle(trans('payment::admin.transactions.fields.status_detail'))
+                ->customMethod('renderStatusDetail')
+                ->width('260px'),
             Field::date('created_at')
                 ->withTitle(trans('payment::admin.transactions.fields.created_at'))
                 ->filterType(Field::DATE)
@@ -90,17 +94,6 @@ class PaymentTransactionsController extends AdminController implements HasList, 
         $generator->create = false;
     }
 
-    protected function statusOptions(): array
-    {
-        return [
-            PaymentTransaction::STATUS_INITIALIZED => trans('payment::admin.transactions.statuses.initialized'),
-            PaymentTransaction::STATUS_SENT => trans('payment::admin.transactions.statuses.sent'),
-            PaymentTransaction::STATUS_RETURNED => trans('payment::admin.transactions.statuses.returned'),
-            PaymentTransaction::STATUS_SUCCESS => trans('payment::admin.transactions.statuses.success'),
-            PaymentTransaction::STATUS_FAILED => trans('payment::admin.transactions.statuses.failed'),
-        ];
-    }
-
     public function getStats(?Builder $query = null): array
     {
         $baseQuery = $query ? clone $query : PaymentTransaction::query();
@@ -113,17 +106,50 @@ class PaymentTransactionsController extends AdminController implements HasList, 
         return [
             StatCard::make(trans('payment::admin.transactions.stats.total'), (string) $total)
                 ->withColor('primary')
-                ->withIcon('ph ph-chart-line-up ph-2x'),
+                ->withIcon('ph-chart-line-up'),
             StatCard::make(trans('payment::admin.transactions.stats.success'), (string) $success)
                 ->withColor('success')
-                ->withIcon('ph ph-check-square ph-2x'),
+                ->withIcon('ph-check-square'),
             StatCard::make(trans('payment::admin.transactions.stats.failed'), (string) $failed)
                 ->withColor('danger')
-                ->withIcon('ph ph-x-square ph-2x'),
+                ->withIcon('ph-x-square'),
             StatCard::make(trans('payment::admin.transactions.stats.today'), (string) $today)
                 ->withColor('warning')
-                ->withIcon('ph ph-clock ph-2x'),
+                ->withIcon('ph-clock'),
         ];
+    }
+
+    public function renderStatusBadge($row): string
+    {
+        $status = (string) $row->status;
+        $statuses = [
+            PaymentTransaction::STATUS_INITIALIZED => ['class' => 'bg-secondary', 'label' => trans('payment::admin.transactions.statuses.initialized')],
+            PaymentTransaction::STATUS_SENT => ['class' => 'bg-primary', 'label' => trans('payment::admin.transactions.statuses.sent')],
+            PaymentTransaction::STATUS_RETURNED => ['class' => 'bg-info text-dark', 'label' => trans('payment::admin.transactions.statuses.returned')],
+            PaymentTransaction::STATUS_SUCCESS => ['class' => 'bg-success', 'label' => trans('payment::admin.transactions.statuses.success')],
+            PaymentTransaction::STATUS_FAILED => ['class' => 'bg-danger', 'label' => trans('payment::admin.transactions.statuses.failed')],
+        ];
+
+        $config = $statuses[$status] ?? ['class' => 'bg-dark', 'label' => e($status)];
+
+        $badge = sprintf('<span class="badge %s">%s</span>', $config['class'], e($config['label']));
+
+        if ($row->verified_at) {
+            $badge .= '<br><small class="text-muted">'.trans('payment::admin.transactions.fields.verified_at').': '.$row->verified_at.'</small>';
+        }
+
+        return $badge;
+    }
+
+    public function renderStatusDetail($row): string
+    {
+        $detail = trim((string) $row->status_detail);
+
+        if ($detail === '') {
+            return '<span class="text-muted">—</span>';
+        }
+
+        return '<span class="text-wrap">'.e($detail).'</span>';
     }
 }
 

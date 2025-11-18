@@ -5,6 +5,7 @@ namespace RMS\Payment\Gateways;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RMS\Payment\Contracts\Gateway;
 use RMS\Payment\DTO\InitializationResult;
@@ -37,12 +38,24 @@ class ZarinpalGateway implements Gateway
         if ($request->customerMobile) {
             $metadata['mobile'] = $request->customerMobile;
         }
-        if (!empty($metadata)) {
-            $payload['metadata'] = $metadata;
-        }
+        $metadata['order_id'] = (string) ($metadata['order_id'] ?? $request->orderId);
+        $metadata['user_id'] = (string) ($metadata['user_id'] ?? $request->metadata['user_id'] ?? '');
+        array_walk($metadata, function (&$value) {
+            if (is_int($value) || is_float($value)) {
+                $value = (string) $value;
+            } elseif (is_bool($value)) {
+                $value = $value ? '1' : '0';
+            }
+        });
+        $payload['metadata'] = array_filter($metadata, fn ($value) => $value !== null && $value !== '');
         if ($currency = $this->resolveCurrency($request->currency)) {
             $payload['currency'] = $currency;
         }
+
+        // Log::info('payment.zarinpal.init_request', [
+        //     'order_id' => $request->orderId,
+        //     'payload' => $payload,
+        // ]);
 
         $response = Http::withHeaders([
             'accept' => 'application/json',
@@ -51,6 +64,12 @@ class ZarinpalGateway implements Gateway
 
         $body = $response->json();
         $code = Arr::get($body, 'data.code');
+
+        // Log::info('payment.zarinpal.init_response', [
+        //     'order_id' => $request->orderId,
+        //     'status_code' => $response->status(),
+        //     'body' => $body,
+        // ]);
 
         if ($response->failed() || $code !== 100) {
             $message = $this->messageForCode($code, 'در برقراری ارتباط با درگاه زرین‌پال خطا رخ داد.');
@@ -132,6 +151,25 @@ class ZarinpalGateway implements Gateway
 
         $body = $response->json();
         $code = Arr::get($body, 'data.code');
+
+        // Log::info('payment.zarinpal.verify_request', [
+        //     'order_id' => $transaction->order_id,
+        //     'payload' => $verifyPayload,
+        // ]);
+
+        $response = Http::withHeaders([
+            'accept' => 'application/json',
+            'content-type' => 'application/json',
+        ])->post($this->endpoint('verify'), $verifyPayload);
+
+        $body = $response->json();
+        $code = Arr::get($body, 'data.code');
+
+        // Log::info('payment.zarinpal.verify_response', [
+        //     'order_id' => $transaction->order_id,
+        //     'status_code' => $response->status(),
+        //     'body' => $body,
+        // ]);
 
         if ($response->failed() || !in_array($code, [100, 101], true)) {
             $message = $this->messageForCode($code, 'تأیید تراکنش با خطا مواجه شد.');
