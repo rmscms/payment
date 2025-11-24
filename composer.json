@@ -9,7 +9,8 @@
     },
     "autoload": {
         "psr-4": {
-            "RMS\\Payment\\": "src/"
+            "RMS\\Payment\\": "src/",
+            "RMS\\Payment\\Database\\Seeders\\": "database/seeders/"
         }
     },
     "extra": {

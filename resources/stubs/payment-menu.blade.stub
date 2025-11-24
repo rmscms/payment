@@ -1,0 +1,23 @@
+{{-- Payment Management --}}
+@php
+    $paymentChildren = [
+        [
+            'title' => 'درایورهای پرداخت',
+            'url' => route('admin.payment.drivers.index'),
+            'icon' => 'ph-credit-card',
+            'routes' => ['admin.payment.drivers.*'],
+        ],
+        [
+            'title' => 'تراکنش‌ها',
+            'url' => route('admin.payment.transactions.index'),
+            'icon' => 'ph-currency-circle-dollar',
+            'routes' => ['admin.payment.transactions.*'],
+        ],
+    ];
+@endphp
+
+<x-cms::submenu-item
+    title="پرداخت"
+    icon="ph-wallet"
+    :children="$paymentChildren"
+/>

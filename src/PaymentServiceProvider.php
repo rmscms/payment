@@ -11,6 +11,12 @@ class PaymentServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../config/payment.php', 'payment');
 
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                \RMS\Payment\Console\Commands\PaymentInstallCommand::class,
+            ]);
+        }
+
         $this->app->singleton(GatewayManager::class, function ($app) {
             return new GatewayManager(
                 $app,
